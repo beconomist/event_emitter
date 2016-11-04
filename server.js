@@ -13,7 +13,7 @@ channel.on('join', function(id, client) {
     }
   }; // subscriptions is a function used to broadcast own message to all suscribers other than selfs. So each client has its own suscriptions function.
   // whenever the sender is not me, write the message to my console.
-  this.on('broadcast', this.subscriptions[id]);
+  this.on('broadcast', this.subscriptions[id]); // Register 'broadcast' listener to a client. Whenever data comes in, 'broadcast' event is triggered, and subscriptions of that client is called.
 });
 
 var server = net.createServer(function(client) {
