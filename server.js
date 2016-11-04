@@ -11,15 +11,14 @@ channel.on('join', function(id, client) {
     if (id != senderId) {
       this.clients[id].write('[ID] ' + id + ' says: ' + message + '\n');
     }
-  };
-  this.on('broadcast', this.subscriptions[id]); // how to emit broadcast event?
+  }; // subscriptions is a function used to broadcast own message to all suscribers other than selfs. So each client has its own suscriptions function.
+  // whenever the sender is not me, write the message to my console.
+  this.on('broadcast', this.subscriptions[id]);
 });
 
 var server = net.createServer(function(client) {
   var id = client.remoteAddress + ':' + client.remotePort;
   console.log('A new connection was made: ', id);
-
-  channel.emit('join', id, client); // Callback to net.createServer is called because of an implicit 'connection' event
 
   // client.on('connect', function() {
   //   channel.emit('join', id, client);
@@ -27,8 +26,11 @@ var server = net.createServer(function(client) {
   // Above code won't work
   // Because on the server side, the client(socket) is already connected when you
   // get the callback, and the event you're trying to listen to isn't emitted on // an already connected socket.
+  // Instead, use the code below:
+  channel.emit('join', id, client); // Callback to net.createServer is called because of an implicit 'connection' event
 
-  client.on('data', function(data) {
+
+  client.on('data', function(data) { // when data come in, emit 'broadcast' event and pass sender's id and data to subscriptions function
     data = data.toString('utf8').trim();
     console.log('[ID] ' + id + ' says: ' + data);
     channel.emit('broadcast', id, data);
