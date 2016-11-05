@@ -9,12 +9,27 @@ channel.on('join', function(id, client) {
   this.clients[id] = client;
   this.subscriptions[id] = function(senderId, message) {
     if (id != senderId) {
-      this.clients[id].write('[ID] ' + id + ' says: ' + message + '\n');
+      this.clients[id].write(senderId + ' says: ' + message + '\n');
     }
   }; // subscriptions is a function used to broadcast own message to all suscribers other than selfs. So each client has its own suscriptions function.
   // whenever the sender is not me, write the message to my console.
-  this.on('broadcast', this.subscriptions[id]); // Register 'broadcast' listener to a client. Whenever data comes in, 'broadcast' event is triggered, and subscriptions of that client is called.
+
+  var welcome = "Welcome! " + 'Guests online: ' + (this.listeners('broadcast').length + 1) ;
+  client.write(welcome + '\n');
+
+  this.on('broadcast', this.subscriptions[id]); // Register 'broadcast' listener to the Channel with a callback of subscriptions functions. Whenever data comes in, 'broadcast' event is triggered, and subscriptions functions of Channel is called on every client.
 });
+channel.on('leave', function(id) {
+  channel.removeListener(    // Remove 'broadcast' listener from the client
+    'broadcast', this.subscriptions[id]);
+  channel.emit('broadcast', 'system' ,id + ' has left the chat. \n'); // Tell other clients
+});
+
+channel.on('shutdown', function() {
+  channel.emit('broadcast', 'system', 'Chat has shut down. \n');
+  channel.removeAllListeners('broadcast', this.subscriptions);
+});
+
 
 var server = net.createServer(function(client) {
   var id = client.remoteAddress + ':' + client.remotePort;
@@ -31,9 +46,16 @@ var server = net.createServer(function(client) {
 
 
   client.on('data', function(data) { // when data come in, emit 'broadcast' event and pass sender's id and data to subscriptions function
-    data = data.toString('utf8').trim();
-    console.log('[ID] ' + id + ' says: ' + data);
+  data = data.toString().trim();
+    if (data == "shutdown") {
+      channel.emit('shutdown');
+    }
     channel.emit('broadcast', id, data);
   });
+
+  client.on('close', function() { // When client disconnects, emit 'close' event on client
+    channel.emit('leave', id); // than emit 'leave' event on Channel
+  });
+
 });
 server.listen(8888);
